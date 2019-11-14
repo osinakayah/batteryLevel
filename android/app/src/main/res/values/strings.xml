@@ -1,0 +1,7 @@
+<resources>
+    <string name="user_id">22255681313</string>
+    <string name="api_key">AfykWBx3tHs5dhBioTFqRpBv6nGUaoJ0w8tzuKwyrhb4H9RqLMpatfFFyeWVPqeg@fm-ke</string>
+    <string name="api_url">https://fm-ke.discoverelement.com:9443</string>
+    <string name="capture_failed">Please position your face inside the outline and follow the dots</string>
+    <string name="title_activity_test">TestActivity</string>
+</resources>
