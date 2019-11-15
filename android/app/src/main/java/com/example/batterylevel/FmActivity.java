@@ -8,7 +8,6 @@ import android.os.Bundle;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.util.Base64;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,11 +16,17 @@ import com.element.camera.Capture;
 import com.element.common.PermissionUtils;
 import com.google.gson.Gson;
 
+import org.greenrobot.eventbus.EventBus;
+
 import java.net.HttpURLConnection;
 
 import okhttp3.Response;
 
 public class FmActivity extends ElementFaceCaptureActivity {
+
+    private String message;
+    private byte[] base64String;
+
     @Override
     protected void onCreate(Bundle bundle) {
         getIntent().putExtra(EXTRA_ELEMENT_USER_ID, getString(R.string.user_id));
@@ -44,16 +49,20 @@ public class FmActivity extends ElementFaceCaptureActivity {
     @SuppressLint("PrivateResource")
     @Override
     public void onImageCaptured(@Nullable Capture[] captures, @NonNull String code) {
-        Capture capture = captures[0];
-        String a = Base64.encodeToString(capture.data, Base64.DEFAULT);
 
         if (CAPTURE_RESULT_OK.equals(code) || CAPTURE_RESULT_GAZE_OK.equals(code) || CAPTURE_STATUS_VALID_CAPTURES.equals(code)) {
             toastMessage(R.string.processing);
 
             if (captures != null) {
+//                if (captures.length > 0) {
+//                    base64String = captures[0].data;
+//                }
                 new FmTask(faceMatchingTaskCallback, captures).execute();
             }
         } else if (CAPTURE_RESULT_NO_FACE.equals(code) || CAPTURE_RESULT_GAZE_FAILED.equals(code)) {
+            if (captures.length > 0) {
+                base64String = captures[0].data;
+            }
             showResult(getString(R.string.capture_failed), R.drawable.common_google_signin_btn_icon_dark);
         }
     }
@@ -69,14 +78,15 @@ public class FmActivity extends ElementFaceCaptureActivity {
     }
 
     private void showResult(String message, int iconResId) {
+        this.message = message;
         Intent intent = getIntent();
         intent.setClass(getBaseContext(), MainActivity.class);
         intent.putExtra("FM_MESSAGE", message);
+
+
         setResult(Activity.RESULT_OK, intent);
+
         finish();
-//        FmResultFragment fragment = new FmResultFragment();
-//        fragment.setData(message, iconResId);
-//        fragment.show(getSupportFragmentManager(), null);
     }
 
     private FmTask.FaceMatchingTaskCallback faceMatchingTaskCallback = new FmTask.FaceMatchingTaskCallback() {
@@ -116,4 +126,12 @@ public class FmActivity extends ElementFaceCaptureActivity {
             showResult(message, R.drawable.common_google_signin_btn_icon_dark);
         }
     };
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (base64String != null && message != null) {
+            EventBus.getDefault().post(new ElementTaskEvent(base64String, message));
+        }
+    }
 }
