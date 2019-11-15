@@ -1,120 +1,119 @@
 package com.example.batterylevel;
 
+
+import com.element.camera.ElementFaceCaptureActivity;
+
 import android.app.Activity;
-import android.app.ProgressDialog;
-import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.ContextThemeWrapper;
-import okhttp3.Response;
+
+import android.annotation.SuppressLint;
+import android.content.Intent;
+import android.util.Base64;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.element.camera.Capture;
-import com.element.camera.ElementFaceCaptureActivity;
+import com.element.common.PermissionUtils;
 import com.google.gson.Gson;
 
 import java.net.HttpURLConnection;
 
-import android.content.Intent;
+import okhttp3.Response;
 
 public class FmActivity extends ElementFaceCaptureActivity {
-    private ProgressDialog progressDialog;
-
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        getIntent().putExtra(EXTRA_USER_APP_ID, getPackageName());
+    protected void onCreate(Bundle bundle) {
         getIntent().putExtra(EXTRA_ELEMENT_USER_ID, getString(R.string.user_id));
+        getIntent().putExtra(EXTRA_LIVENESS_DETECTION, true);
+        getIntent().putExtra(EXTRA_TUTORIAL, false);
+        getIntent().putExtra(EXTRA_SECONDARY_TUTORIAL, false);
 
-
-
-        super.onCreate(savedInstanceState);
+        super.onCreate(bundle);
     }
 
     @Override
-    public void onImageCaptured(@Nullable Capture[] captures, @NonNull String code) {
-        if (CAPTURE_RESULT_OK.equals(code) || CAPTURE_RESULT_GAZE_OK.equals(code) || CAPTURE_STATUS_VALID_CAPTURES.equals(code)) {
-            if (progressDialog == null) {
-                progressDialog = new ProgressDialog(FmActivity.this);
-            }
-            showProgressDialog(FmActivity.this, getString(R.string.processing));
-
-            if (captures != null) {
-                String userId = getIntent().getStringExtra(EXTRA_ELEMENT_USER_ID);
-                new FmTask(faceMatchingTaskCallback).execute(userId, captures);
-            }
-        } else if (CAPTURE_RESULT_NO_FACE.equals(code) || CAPTURE_RESULT_GAZE_FAILED.equals(code)) {
-            sendBackResult(false, getString(R.string.capture_failed));
-//            showResult(getString(R.string.capture_failed), R.drawable.icon_focus);
+    protected void onResume() {
+        super.onResume();
+        if (!PermissionUtils.isGranted(getBaseContext(), android.Manifest.permission.CAMERA)) {
+            toastMessage("Please grant all permissions in Settings -> Apps");
+            finish();
         }
     }
-    @Override
-    public void onPointerCaptureChanged(boolean hasCapture) {
 
+    @SuppressLint("PrivateResource")
+    @Override
+    public void onImageCaptured(@Nullable Capture[] captures, @NonNull String code) {
+        Capture capture = captures[0];
+        String a = Base64.encodeToString(capture.data, Base64.DEFAULT);
+
+        if (CAPTURE_RESULT_OK.equals(code) || CAPTURE_RESULT_GAZE_OK.equals(code) || CAPTURE_STATUS_VALID_CAPTURES.equals(code)) {
+            toastMessage(R.string.processing);
+
+            if (captures != null) {
+                new FmTask(faceMatchingTaskCallback, captures).execute();
+            }
+        } else if (CAPTURE_RESULT_NO_FACE.equals(code) || CAPTURE_RESULT_GAZE_FAILED.equals(code)) {
+            showResult(getString(R.string.capture_failed), R.drawable.common_google_signin_btn_icon_dark);
+        }
     }
 
-    private void sendBackResult(final boolean wasSuccessful, final String message){
+    void recapture() {
+        finish();
 
-        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        overridePendingTransition(0, 0);
+        Intent intent = getIntent();
+        intent.setClass(getBaseContext(), getClass());
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+    }
+
+    private void showResult(String message, int iconResId) {
+        Intent intent = getIntent();
+        intent.setClass(getBaseContext(), MainActivity.class);
         intent.putExtra("FM_MESSAGE", message);
         setResult(Activity.RESULT_OK, intent);
         finish();
+//        FmResultFragment fragment = new FmResultFragment();
+//        fragment.setData(message, iconResId);
+//        fragment.show(getSupportFragmentManager(), null);
     }
+
     private FmTask.FaceMatchingTaskCallback faceMatchingTaskCallback = new FmTask.FaceMatchingTaskCallback() {
         @Override
-        public Context getContext() {
-            return getBaseContext();
+        public String getUrl() {
+            return getString(R.string.api_url);
+        }
+
+        @Override
+        public String apiKey() {
+            return getString(R.string.api_key);
+        }
+
+        @Override
+        public String userId() {
+            return getString(R.string.user_id);
+        }
+
+        @Override
+        public String clientId() {
+            return getString(R.string.client_id);
         }
 
         @Override
         public void onResult(Response response) throws Exception {
-
             if (response.code() == HttpURLConnection.HTTP_OK) {
                 FmTask.FmResponse fmResponse = new Gson().fromJson(response.body().string(), FmTask.FmResponse.class);
-                // showResult(fmResponse.displayMessage, R.drawable.common_google_signin_btn_icon_dark_normal);
-                sendBackResult(true, fmResponse.displayMessage);
+                showResult(fmResponse.displayMessage, R.drawable.common_google_signin_btn_icon_dark);
             } else {
                 FmTask.ServerMessage serverMessage = new Gson().fromJson(response.body().string(), FmTask.ServerMessage.class);
-                // showResult(serverMessage.message, R.drawable.icon_focus);
-                sendBackResult(false, serverMessage.message);
+                showResult(serverMessage.message, R.drawable.common_google_signin_btn_icon_dark);
             }
-            dismissProgressDialog(FmActivity.this);
         }
 
         @Override
         public void onException(String message) {
-            // showResult(message, R.drawable.ring_blue);
-            sendBackResult(false, message);
-            dismissProgressDialog(FmActivity.this);
+            showResult(message, R.drawable.common_google_signin_btn_icon_dark);
         }
     };
-    private void showProgressDialog(final Activity activity, final String msg) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (progressDialog == null) {
-                    progressDialog = new ProgressDialog(new ContextThemeWrapper(
-                            activity, android.R.style.Theme_DeviceDefault_Light));
-                }
-
-                if (null != msg && msg.length() > 0) {
-                    progressDialog.setMessage(msg);
-                }
-
-                progressDialog.setCancelable(false);
-                progressDialog.show();
-            }
-        });
-    }
-
-    private void dismissProgressDialog(final Activity activity) {
-        if (progressDialog != null) {
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    progressDialog.dismiss();
-                }
-            });
-        }
-    }
 }

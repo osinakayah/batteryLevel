@@ -10,11 +10,11 @@
         android:label="batterylevel"
         android:theme="@style/Theme.AppCompat.Light"
         tools:replace="android:appComponentFactory">
+        <activity android:name=".FmActivity"></activity>
         <activity
             android:name=".TestActivity"
             android:label="@string/title_activity_test"
-            android:theme="@style/NoActionBar"></activity>
-        <activity android:name=".FmActivity" />
+            android:theme="@style/NoActionBar" />
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"

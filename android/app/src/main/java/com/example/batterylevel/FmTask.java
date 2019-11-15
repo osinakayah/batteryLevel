@@ -1,16 +1,10 @@
 package com.example.batterylevel;
 
-import android.content.Context;
-import android.location.Location;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.util.Base64;
 
 import com.element.camera.Capture;
-import com.element.camera.ElementSDK;
 import com.google.gson.Gson;
-
-import java.util.TimeZone;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -18,36 +12,30 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-class FmTask extends AsyncTask<Object, Void, Void> {
-
+public class FmTask  extends AsyncTask<Object, Void, Void> {
     private static final MediaType TYPE = MediaType.parse("application/json; charset=utf-8");
 
-    private final FaceMatchingTaskCallback faceMatchingTaskCallback;
+    private final FaceMatchingTaskCallback callback;
+
+    private final Capture[] captures;
 
     private final Request.Builder builder;
 
-    FmTask(FaceMatchingTaskCallback faceMatchingTaskCallback) {
-        Context context = faceMatchingTaskCallback.getContext();
-        String url = context.getString(R.string.api_url) + "/api/faceMatching";
-        this.faceMatchingTaskCallback = faceMatchingTaskCallback;
-        this.builder = new Request.Builder().url(url);
-
-        builder.addHeader("apiKey", context.getString(R.string.api_key));
-        builder.addHeader("appVersion", BuildConfig.VERSION_NAME);
-        builder.addHeader("os", "ANDROID");
-        builder.addHeader("appId", context.getPackageName());
-        builder.addHeader("deviceModel", Build.MODEL);
-        builder.addHeader("sdkVersion", "1.0");
+    FmTask(FaceMatchingTaskCallback callback, Capture[] captures) {
+        this.callback = callback;
+        this.captures = captures;
+        this.builder = new Request.Builder().url(callback.getUrl());
     }
 
     @Override
     protected Void doInBackground(Object... params) {
         OkHttpClient client = new OkHttpClient();
+        Utils.addHttpHeaders(builder, callback.apiKey(), callback.userId(), callback.clientId());
 
         try {
             FmRequest fmRequest = new FmRequest();
-            fmRequest.userId = (String) params[0];
-            fmRequest.setImages((Capture[]) params[1]);
+            fmRequest.cardId = callback.userId();
+            fmRequest.setImages(captures);
 
             String json = new Gson().toJson(fmRequest);
             RequestBody requestBody = RequestBody.create(TYPE, json);
@@ -55,29 +43,17 @@ class FmTask extends AsyncTask<Object, Void, Void> {
 
             Request request = builder.build();
             Response response = client.newCall(request).execute();
-
-            faceMatchingTaskCallback.onResult(response);
-
+            callback.onResult(response);
         } catch (Exception e) {
-            faceMatchingTaskCallback.onException(e.getMessage());
+            callback.onException(e.getMessage());
         }
-
         return null;
     }
 
     private static class FmRequest {
-        String userId;
-        double latitude;
-        double longitude;
-        String timeZone;
+        String cardId;
+        // String userId;
         Image[] images;
-
-        FmRequest() {
-            Location location = ElementSDK.getLocation();
-            latitude = location.getLatitude();
-            longitude = location.getLongitude();
-            timeZone = TimeZone.getDefault().getID();
-        }
 
         void setImages(Capture[] imageData) {
             images = new Image[imageData.length];
@@ -111,7 +87,13 @@ class FmTask extends AsyncTask<Object, Void, Void> {
     }
 
     interface FaceMatchingTaskCallback {
-        Context getContext();
+        String getUrl();
+
+        String apiKey();
+
+        String userId();
+
+        String clientId();
 
         void onResult(Response response) throws Exception;
 

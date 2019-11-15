@@ -1,4 +1,4 @@
-include ':app', ':element-fm-sdk'
+include ':app', ':element-face-core', ':element-face-cam', ':element-face-ui', ':element-face-support'
 
 def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()
 

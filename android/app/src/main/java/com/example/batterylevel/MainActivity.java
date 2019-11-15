@@ -46,14 +46,12 @@ public class MainActivity extends FlutterActivity {
       else {
         _result.success(result);
       }
-
-
     }
 
   }
 
   private void startActivityC(){
-    final Intent intent = new Intent(this, TestActivity.class);
+    final Intent intent = new Intent(this, FmActivity.class);
     startActivityForResult(intent, FACE_SCAN_REQUEST_CODE);
   }
 
