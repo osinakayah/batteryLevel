@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:typed_data';
 import 'dart:async';
-import 'dart:convert';
+import './element_response.dart';
 
 void main() => runApp(MyApp());
 
@@ -39,15 +39,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _getBatteryLevel() async {
     try {
-      _bytesData = await platform.invokeMethod('invokeFMCheck');
+//      _bytesData = await platform.invokeMethod('invokeFMCheck');
+    final String d = await platform.invokeMethod('invokeFMCheck');
+   ElementResponse elementResponse = ElementResponse.fromRawJson(d);
 
-      print(_batteryLevel);
-      print(_bytesData);
+      _batteryLevel = elementResponse.message;
+      _bytesData = elementResponse.imageByte;
+
 
       setState(() {});
 
     } on PlatformException catch (e) {
-//      batteryLevel = Uint8List;
         print(e);
     }
 

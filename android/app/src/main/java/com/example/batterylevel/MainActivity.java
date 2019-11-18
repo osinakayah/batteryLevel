@@ -7,9 +7,9 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import android.content.Intent;
-import android.util.Log;
 
-import androidx.annotation.Nullable;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -18,14 +18,11 @@ import org.greenrobot.eventbus.ThreadMode;
 public class MainActivity extends FlutterActivity {
   private static final String CHANNEL = "samples.flutter.dev/battery";
   private static final String TAG = "Osinakayah";
-  private static final int FACE_SCAN_REQUEST_CODE = 1;
   public MethodChannel.Result _result;
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     GeneratedPluginRegistrant.registerWith(this);
-
-
 
     new MethodChannel(getFlutterView(), CHANNEL).setMethodCallHandler(new MethodCallHandler() {
       @Override
@@ -74,14 +71,21 @@ public class MainActivity extends FlutterActivity {
 
   @Subscribe(threadMode = ThreadMode.MAIN)
   public void onElementTaskEvent(ElementTaskEvent event) {
-    _result.success(event.imageByte);
+    ObjectMapper objectMapper = new ObjectMapper();
+    try {
+      _result.success(objectMapper.writeValueAsString(event));
+    }
+    catch (JsonProcessingException e) {
+      _result.success("{}");
+    }
+
     // _result.success(event);
   }
 
   private void startActivityC(){
     final Intent intent = new Intent(this, FmActivity.class);
-    startActivityForResult(intent, FACE_SCAN_REQUEST_CODE);
-    // startActivity(intent);
+    // startActivityForResult(intent, FACE_SCAN_REQUEST_CODE);
+    startActivity(intent);
   }
 
 }

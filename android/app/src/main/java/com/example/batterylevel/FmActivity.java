@@ -50,9 +50,11 @@ public class FmActivity extends ElementFaceCaptureActivity {
     @Override
     public void onImageCaptured(@Nullable Capture[] captures, @NonNull String code) {
 
+        if (captures != null && captures.length > 0) {
+            base64String = captures[0].data;
+        }
         if (CAPTURE_RESULT_OK.equals(code) || CAPTURE_RESULT_GAZE_OK.equals(code) || CAPTURE_STATUS_VALID_CAPTURES.equals(code)) {
             toastMessage(R.string.processing);
-
             if (captures != null) {
 //                if (captures.length > 0) {
 //                    base64String = captures[0].data;
@@ -60,9 +62,6 @@ public class FmActivity extends ElementFaceCaptureActivity {
                 new FmTask(faceMatchingTaskCallback, captures).execute();
             }
         } else if (CAPTURE_RESULT_NO_FACE.equals(code) || CAPTURE_RESULT_GAZE_FAILED.equals(code)) {
-            if (captures.length > 0) {
-                base64String = captures[0].data;
-            }
             showResult(getString(R.string.capture_failed), R.drawable.common_google_signin_btn_icon_dark);
         }
     }
@@ -79,12 +78,12 @@ public class FmActivity extends ElementFaceCaptureActivity {
 
     private void showResult(String message, int iconResId) {
         this.message = message;
-        Intent intent = getIntent();
-        intent.setClass(getBaseContext(), MainActivity.class);
-        intent.putExtra("FM_MESSAGE", message);
-
-
-        setResult(Activity.RESULT_OK, intent);
+//        Intent intent = getIntent();
+//        intent.setClass(getBaseContext(), MainActivity.class);
+//        intent.putExtra("FM_MESSAGE", message);
+//
+//
+//        setResult(Activity.RESULT_OK, intent);
 
         finish();
     }
